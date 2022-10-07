@@ -10,8 +10,6 @@ disk::disk()
 void
 disk::read_block(blockid_t id, char *buf)
 {
-  // std::cout << "read blockid: " << id << std::endl;
-  // std::cout << blocks[id][0] << blocks[id][1] << blocks[id][2] << blocks[id][3] << std::endl;
   for (int i = 0; i < BLOCK_SIZE; ++i) {
     buf[i] = blocks[id][i];
   }
@@ -20,12 +18,9 @@ disk::read_block(blockid_t id, char *buf)
 void
 disk::write_block(blockid_t id, const char *buf)
 {
-  // std::cout << "write blockid: " << id << std::endl;
   for (int i = 0; i < BLOCK_SIZE; ++i) {
     blocks[id][i] = buf[i];
-    // if (i < 4) std::cout << buf[i] << ' ' << blocks[id][i] << std::endl;
   }
-  // std::cout << blocks[id][0] << blocks[id][1] << blocks[id][2] << blocks[id][3] << std::endl;
 }
 
 // block layer -----------------------------------------
@@ -34,9 +29,13 @@ bool
 block_manager::isfree_block(blockid_t blockid, char *buf)
 {
   blockid_t bit_id = blockid % BPB;
-  if ((buf[bit_id / 8] >> (7 - (bit_id % 8))) & 0x01) return false;
-  else return true;
+  if ((buf[bit_id / 8] >> (7 - (bit_id % 8))) & 0x01) {
+    return false;
+  } else {
+    return true;
+  }
 }
+
 void
 block_manager::setbit_block(blockid_t blockid, char *buf)
 {
@@ -257,8 +256,8 @@ inode_manager::read_file(uint32_t inum, char **buf_out, int *size)
   inode_t *ino = get_inode(inum);
   *size = ino->size;
   if (*size == 0) return;
-  
-  int block_num = ino->size / BLOCK_SIZE + 1;
+
+  int block_num = (ino->size - 1) / BLOCK_SIZE + 1;
 
   (*buf_out) = new char [block_num * BLOCK_SIZE];
   for (int i = 0; i < MIN(block_num, NDIRECT); ++i) {
@@ -268,12 +267,12 @@ inode_manager::read_file(uint32_t inum, char **buf_out, int *size)
   char indirect_block[BLOCK_SIZE];
   if (block_num > NDIRECT) {
     bm->read_block(ino->blocks[NDIRECT], indirect_block);
+    // std::cout << "read indirect block: " << ino->blocks[NDIRECT] << std::endl;
     for (int i = NDIRECT; i < block_num; ++i) {
       bm->read_block(indirect_blockid(i, indirect_block), (*buf_out)+i*BLOCK_SIZE);
     }
   }
 
-  // std::cout << "read buf[0]: " << (*buf_out)[0] << std::endl;
   
   /*
    * your code goes here.
@@ -290,25 +289,29 @@ void
 inode_manager::write_file(uint32_t inum, const char *buf, int size)
 {
   inode_t *ino = get_inode(inum);
-  int block_num = size / BLOCK_SIZE + 1;
+  int block_num = (size - 1) / BLOCK_SIZE + 1;
 
-  // std::cout << "before free\n";
 
   //free blocks
   char indirect_block[BLOCK_SIZE];
-  if (ino->size / BLOCK_SIZE + 1 > NDIRECT) 
+  if (ino->size / BLOCK_SIZE + 1 > NDIRECT) {
+    // std::cout << "111\n";
     bm->read_block(ino->blocks[NDIRECT], indirect_block);
+  }
+    
   for (int i = block_num; i < ino->size / BLOCK_SIZE + 1; ++i) {
+    // std::cout << "111\n";
     if (i < NDIRECT) bm->free_block(ino->blocks[i]);
     else bm->free_block(indirect_blockid(i, indirect_block));
   }
   if (block_num <= NDIRECT && ino->size / BLOCK_SIZE + 1 > NDIRECT) {
+    // std::cout << "111\n";
     bm->free_block(ino->blocks[NDIRECT]);
   }
 
   // std::cout << "after free\n";
 
-  // std::cout << size << ' ' << buf[0] << ' ' << block_num << ' ' << std::endl;
+  
 
   //direct blocks
   for (int i = 0; i < MIN(block_num, NDIRECT); ++i) {
@@ -318,7 +321,10 @@ inode_manager::write_file(uint32_t inum, const char *buf, int size)
       ino->blocks[i] = new_block;
     }
     bm->write_block(ino->blocks[i], buf+i*BLOCK_SIZE);
+    // std::cout << "write block id: " << ino->blocks[i] << std::endl;
   }
+
+  // std::cout << "after direct\n";
 
   //indirect blocks
   if (block_num > NDIRECT) {
@@ -332,12 +338,12 @@ inode_manager::write_file(uint32_t inum, const char *buf, int size)
       if (i * BLOCK_SIZE >= ino->size) {
         blockid_t new_block = bm->alloc_block();
         set_indirect_blockid(i, new_block, indirect_block);
-        // std::cout << "indirect block id: "
       }
       bm->write_block(indirect_blockid(i, indirect_block), buf+i*BLOCK_SIZE);
     }
     bm->write_block(ino->blocks[NDIRECT], indirect_block);
   }
+  // std::cout << "after indirect\n";
 
   ino->size = size;
   put_inode(inum, ino);
@@ -387,7 +393,7 @@ inode_manager::remove_file(uint32_t inum)
    * note: you need to consider about both the data block and inode of the file
    */
   inode_t *ino = get_inode(inum);
-  int block_num = ino->size / BLOCK_SIZE + 1;
+  int block_num = (ino->size - 1) / BLOCK_SIZE + 1;
 
   //free blocks
   for (int i = 0; i < MIN(block_num, NDIRECT); ++i) {

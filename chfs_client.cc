@@ -145,8 +145,17 @@ chfs_client::create(inum parent, const char *name, mode_t mode, inum &ino_out)
      * after create file or dir, you must remember to modify the parent infomation.
      */
 
-    //检查文件是否已存在
     //没有考虑操作失败的情况
+    std::cout << parent << ' ' << std::string(name) << std::endl;
+
+    //检查文件是否已经存在，如存在返回EXIST
+    bool is_exist = false; inum ino;
+    lookup(parent, name, is_exist, ino);
+    if (is_exist) {
+        return EXIST;
+    }
+
+    std::cout << parent << ' ' << std::string(name) << std::endl;
 
     ec->create(extent_protocol::T_FILE, ino_out); //最好检查一下操作是否成功
 
@@ -214,7 +223,7 @@ chfs_client::lookup(inum parent, const char *name, bool &found, inum &ino_out)
             break;
         }
     }
-    // std::cout << std::endl;
+    // std::cout << found << std::endl;
 
     return r;
 }
