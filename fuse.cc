@@ -124,9 +124,12 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
     printf("fuseserver_setattr 0x%x\n", to_set);
     if (FUSE_SET_ATTR_SIZE & to_set) {
         printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
+        chfs->setattr(ino, attr->st_size);
 
-#if 0
+#if 1
     struct stat st;
+    getattr(ino, st);
+    fuse_reply_attr(req, &st, 0);
     // Change the above line to "#if 1", and your code goes here
     // Note: fill st using getattr before fuse_reply_attr
 #else
@@ -154,11 +157,13 @@ void
 fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
         off_t off, struct fuse_file_info *fi)
 {
-#if 0
-    // Change the above "#if 0" to "#if 1", and your code goes here
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
+    std::string data;
+    if (!chfs->read(ino, size, off, data)) {
+        if (data == "") fuse_reply_buf(req, nullptr, 0);
+        else fuse_reply_buf(req, data.c_str(), data.size());
+    } else {
+        fuse_reply_err(req, EIO);
+    }
 
 
 }
@@ -183,11 +188,15 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
         const char *buf, size_t size, off_t off,
         struct fuse_file_info *fi)
 {
-#if 0
-    // Change the above line to "#if 1", and your code goes here
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
+    size_t bytes_written = 0;
+    if (!chfs->write(ino, size, off, buf, bytes_written) && bytes_written == size) {
+        // std::cout << "yead\n";
+        fuse_reply_write(req, bytes_written);
+    } else {
+        // std::cout << "oh no\n";
+        // std::cout << size << ' ' << bytes_written << std::endl;
+        fuse_reply_err(req, EIO);
+    }
 }
 
 //

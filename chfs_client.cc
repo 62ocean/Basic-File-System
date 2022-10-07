@@ -125,6 +125,21 @@ chfs_client::setattr(inum ino, size_t size)
 {
     int r = OK;
 
+    std::string content;
+    extent_protocol::attr a;
+    ec->getattr(ino, a);
+
+    if (size == a.size) return r;
+    else if (size > a.size) {
+        ec->get(ino, content);
+        std::string extra_string(size - a.size, '\0');
+        content.append(extra_string);
+        ec->put(ino, content);
+    } else {
+        ec->get(ino, content);
+        content = content.substr(0, size);
+        ec->put(ino, content);
+    }
     /*
      * your code goes here.
      * note: get the content of inode ino, and modify its content
@@ -192,6 +207,7 @@ chfs_client::mkdir(inum parent, const char *name, mode_t mode, inum &ino_out)
      * after create file or dir, you must remember to modify the parent infomation.
      */
 
+
     return r;
 }
 
@@ -258,6 +274,22 @@ chfs_client::read(inum ino, size_t size, off_t off, std::string &data)
 {
     int r = OK;
 
+    std::string content;
+    extent_protocol::attr a;
+    ec->getattr(ino, a);
+
+    if (off >= a.size) {
+        data = "";
+        return r;
+    } else {
+        ec->get(ino, content);
+        if (off + size <= a.size) {
+            data = content.substr(off, size);
+        } else {
+            data = content.substr(off, a.size - off);
+        }
+    }
+
     /*
      * your code goes here.
      * note: read using ec->get().
@@ -270,8 +302,31 @@ int
 chfs_client::write(inum ino, size_t size, off_t off, const char *data,
         size_t &bytes_written)
 {
+    //bytes_written是干什么的？
+
     int r = OK;
 
+    std::string content;
+    extent_protocol::attr a;
+    ec->getattr(ino, a);
+
+    if (off > a.size) {
+        setattr(ino, off);
+    }
+    ec->get(ino, content);
+    // std::cout << "content: " << content << std::endl;
+    // std::cout << "write data: " << std::string(data, size) << std::endl;
+
+    if (off + size < a.size) {
+        content = content.substr(0, off) 
+            + std::string(data, size) 
+            + content.substr(off + size, a.size - off - size);
+    } else {
+        content = content.substr(0, off)
+            + std::string(data, size);
+    }
+    ec->put(ino, content);
+    bytes_written = size;
     /*
      * your code goes here.
      * note: write using ec->put().
