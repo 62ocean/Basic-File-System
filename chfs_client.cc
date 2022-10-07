@@ -145,6 +145,30 @@ chfs_client::create(inum parent, const char *name, mode_t mode, inum &ino_out)
      * after create file or dir, you must remember to modify the parent infomation.
      */
 
+    //检查文件是否已存在
+    //没有考虑操作失败的情况
+
+    ec->create(extent_protocol::T_FILE, ino_out); //最好检查一下操作是否成功
+
+    std::string dir;
+    ec->get(parent, dir);
+
+    char dir_entry[ENTRY_SIZE] = {0};
+    strcpy(dir_entry, name);
+    *(inum *)(dir_entry + ENTRY_SIZE - 8) = ino_out;
+
+    dir.append(dir_entry, ENTRY_SIZE);
+    ec->put(parent, dir);
+    // std::cout << dir << std::endl;
+
+    // std::cout << "new ino: " << ino_out << std::endl;
+
+    // for (int i = 0; i < dir.size(); i += ENTRY_SIZE) {
+    //     std::cout << *(inum *)(dir.c_str() + i + ENTRY_SIZE - 8) << ' ';
+    // }
+    // std::cout << std::endl;
+
+
     return r;
 }
 
@@ -172,6 +196,25 @@ chfs_client::lookup(inum parent, const char *name, bool &found, inum &ino_out)
      * note: lookup file from parent dir according to name;
      * you should design the format of directory content.
      */
+    std::string dir;
+    ec->get(parent, dir);
+    std::string filename(name);
+    // std::cout << "look up filename: " << filename << std::endl;
+
+    found = false;
+
+    for (int i = 0; i < dir.size(); i += ENTRY_SIZE) {
+        // std::cout << dir.substr(i, filename.size()) << std::endl;
+        // std::cout << *(inum *)(dir.c_str() + i + ENTRY_SIZE - 8) << ' ';
+        if (dir.compare(i, filename.size(), filename) == 0) {
+            found = true;
+            ino_out = *(inum *)(dir.c_str() + i + ENTRY_SIZE - 8);
+            // std::cout << "found ino: " << ino_out << std::endl;
+            // std::cout << dir.substr(i, filename.size()) << std::endl;
+            break;
+        }
+    }
+    // std::cout << std::endl;
 
     return r;
 }
@@ -186,6 +229,17 @@ chfs_client::readdir(inum dir, std::list<dirent> &list)
      * note: you should parse the dirctory content using your defined format,
      * and push the dirents to the list.
      */
+    std::string dir_list;
+    ec->get(dir, dir_list);
+
+    for (int i = 0; i < dir_list.size(); i += ENTRY_SIZE) {
+        std::string filename(dir_list.c_str() + i);
+        dirent dir_entry;
+        dir_entry.name = filename;
+        dir_entry.inum = *(inum *)(dir_list.c_str() + i + ENTRY_SIZE - 8);
+        // std::cout << dir_entry.name << ' ' << dir_entry.inum << std::endl;
+        list.push_back(dir_entry);
+    }
 
     return r;
 }

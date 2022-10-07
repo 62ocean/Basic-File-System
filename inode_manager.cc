@@ -256,6 +256,8 @@ inode_manager::read_file(uint32_t inum, char **buf_out, int *size)
 {
   inode_t *ino = get_inode(inum);
   *size = ino->size;
+  if (*size == 0) return;
+  
   int block_num = ino->size / BLOCK_SIZE + 1;
 
   (*buf_out) = new char [block_num * BLOCK_SIZE];
