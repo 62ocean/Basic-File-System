@@ -1,8 +1,27 @@
-# Lab 1: Basic File System
+# Basic File System
 
 **Hand out: Sept 22, 2022**
 
 **Deadline: Oct 7 23:59 (GMT+8) No Extension**
+
+## Contents
+
+- [Basic File System](#basic-file-system)
+  - [Contents](#contents)
+  - [Get Ready](#get-ready)
+  - [Getting Started](#getting-started)
+  - [Part 1](#part-1)
+    - [Part 1A: CREATE/GETATTR](#part-1a-creategetattr)
+    - [Part 1B: PUT/GET](#part-1b-putget)
+    - [Part 1C: REMOVE](#part-1c-remove)
+  - [Part 2](#part-2)
+    - [Part 2A: CREATE/MKNOD, LOOKUP, and READDIR](#part-2a-createmknod-lookup-and-readdir)
+    - [Part 2B: SETATTR, READ, WRITE](#part-2b-setattr-read-write)
+    - [Part 2C: MKDIR and UNLINK](#part-2c-mkdir-and-unlink)
+    - [Part 2D: SYMLINK, READLINK](#part-2d-symlink-readlink)
+  - [GRADING](#grading)
+  - [Handin Procedure](#handin-procedure)
+
 
 ## Get Ready
 
